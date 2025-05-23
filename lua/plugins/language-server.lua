@@ -3,12 +3,13 @@ local lang = require("internal.language-server")
 
 -- https://github.com/williamboman/mason-lspconfig.nvim?tab=readme-ov-file#available-lsp-servers
 local lsp_servers = {
+    lang.server("denols"),
     lang.server("dockerls"),
     lang.server("gopls", {
         -- https://github.com/golang/tools/blob/master/gopls/doc/vim.md#configuration
         settings = {
             gopls = {
-                gofumpt = true,
+                -- gofumpt = true,
                 codelenses = {
                     gc_details = false,
                     generate = true,
@@ -29,7 +30,7 @@ local lsp_servers = {
                     rangeVariableTypes = true,
                 },
                 analyses = {
-                    fieldalignment = true,
+                    fieldalignment = false,
                     nilness = true,
                     unusedparams = true,
                     unusedwrite = true,
@@ -59,8 +60,7 @@ local lsp_servers = {
         },
     }),
     lang.server("tailwindcss"),
-    lang.server("terraformls"),
-    lang.server("tsserver"),
+    lang.server("ts_ls"),
     lang.server("yamlls"),
 }
 
@@ -73,6 +73,42 @@ local handlers_from = function(servers, init)
         acc[s.name] = require("lspconfig")[s.name].setup(s.setup)
         return acc
     end, init)
+end
+
+local setup_deno_typescript = function(lsp_zero, client)
+    local nvim_lsp = require('lspconfig')
+
+    local on_attach = function()
+        if nvim_lsp.util.root_pattern("deno.json", "import_map.json")(vim.fn.getcwd()) then
+            if client.name == "ts_ls" then
+                client.stop()
+                return
+            end
+        end
+    end
+
+    lsp_zero.configure('ts_ls', {
+        on_attach = on_attach(),
+        single_file_support = false,
+        root_dir = require('lspconfig.util').root_pattern('package.json')
+    })
+
+    lsp_zero.configure('denols', {
+        on_attach = on_attach(),
+        root_dir = nvim_lsp.util.root_pattern("deno.json", "deno.jsonc", "import_map.json"),
+    })
+end
+
+local setup_go = function(_, client)
+    -- https://github.com/golang/go/issues/54531#issuecomment-1464982242
+    if client.name == "gopls" and not client.server_capabilities.semanticTokensProvider then
+        local semantic = client.config.capabilities.textDocument.semanticTokens
+        client.server_capabilities.semanticTokensProvider = {
+            full = true,
+            legend = {tokenModifiers = semantic.tokenModifiers, tokenTypes = semantic.tokenTypes},
+            range = true,
+        }
+    end
 end
 
 return {
@@ -99,11 +135,16 @@ return {
         event = "InsertEnter",
         dependencies = {
             { "L3MON4D3/LuaSnip" },
+            { "rafamadriz/friendly-snippets" },
+            { "saadparwaiz1/cmp_luasnip" },
         },
         config = function()
             -- Here is where you configure the autocompletion settings.
             local lsp_zero = require("lsp-zero")
             lsp_zero.extend_cmp()
+
+            -- bind vscode like snippets to luasnip
+            require("luasnip.loaders.from_vscode").lazy_load()
 
             -- And you can configure cmp even more, if you want to.
             local cmp = require("cmp")
@@ -111,6 +152,10 @@ return {
 
             cmp.setup({
                 formatting = lsp_zero.cmp_format(),
+                sources = {
+                    { name = 'nvim_lsp' },
+                    { name = 'luasnip' },
+                },
                 mapping = cmp.mapping.preset.insert({
                     ["<C-Space>"] = cmp.mapping.complete(),
                     ["<Tab>"] = cmp.mapping.select_next_item(select),
@@ -144,7 +189,6 @@ return {
                 },
                 servers = {
                     ["gopls"] = {"go"},
-                    ["tsserver"] = {"javascript", "typescript"},
                 }
             })
 
@@ -155,15 +199,8 @@ return {
                 -- to learn the available actions
                 lsp_zero.default_keymaps({ buffer = bufnr })
 
-                -- https://github.com/golang/go/issues/54531#issuecomment-1464982242
-                if client.name == "gopls" and not client.server_capabilities.semanticTokensProvider then
-                    local semantic = client.config.capabilities.textDocument.semanticTokens
-                    client.server_capabilities.semanticTokensProvider = {
-                        full = true,
-                        legend = {tokenModifiers = semantic.tokenModifiers, tokenTypes = semantic.tokenTypes},
-                        range = true,
-                    }
-                end
+                setup_go(lsp_zero, client)
+                setup_deno_typescript(lsp_zero, client)
             end)
 
             require("mason-lspconfig").setup({
@@ -173,3 +210,4 @@ return {
         end
     },
 }
+

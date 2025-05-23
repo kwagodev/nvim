@@ -2,7 +2,7 @@ return {
     -- https://github.com/nvim-treesitter/nvim-treesitter
     {
         "nvim-treesitter/nvim-treesitter",
-        version = "v0.9.2",
+        version = "v0.9.3",
         build = ":TSUpdate",
         config = function()
             require("nvim-treesitter.configs").setup({
@@ -26,6 +26,7 @@ return {
                     "kotlin",
                     "typescript",
                     "yaml",
+                    "rust",
                 },
 
                 -- Install parsers synchronously (only applied to `ensure_installed`)

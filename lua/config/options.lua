@@ -1,5 +1,10 @@
 vim.g.mapleader = " "
 
+-- deno
+vim.g.markdown_fenced_languages = {
+  "ts=typescript"
+}
+
 local opt = vim.opt
 
 opt.clipboard = "unnamedplus" -- use system clipboard

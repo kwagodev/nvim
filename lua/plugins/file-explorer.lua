@@ -22,7 +22,7 @@ end
 return {
     {
         "nvim-tree/nvim-tree.lua",
-        version = "1.0.0",
+        -- version = "1.0.0",
         lazy = false,
         dependencies = { "nvim-tree/nvim-web-devicons" },
         config = function()
@@ -33,6 +33,9 @@ return {
 
             require("nvim-tree").setup({
                 disable_netrw = true,
+                filters = {
+                    dotfiles = true,
+                },
                 update_focused_file = {
                     enable = true,
                 },

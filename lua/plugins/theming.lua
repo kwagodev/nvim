@@ -1,31 +1,44 @@
-local function melange()
+local function github()
     return {
-        "savq/melange-nvim",
+        "projekt0n/github-nvim-theme",
         config = function()
-            vim.cmd("colorscheme melange")
+            -- vim.cmd('colorscheme github_dark')
         end,
     }
 end
 
 return {
-    melange(),
+    github(),
     {
         "nvim-lualine/lualine.nvim",
-        vent = "BufReadPre",
+        lazy = false,
         config = function()
             require("lualine").setup({
                 options = {
                     theme = "auto",
-                    sections = {
-                        lualine_a = {"mode"},
-                        lualine_b = {"branch", "diff", "diagnostics"},
-                        lualine_c = {"filename"},
-                        lualine_x = {"encoding", "fileformat", "filetype"},
-                        lualine_y = {"progress"},
-                        lualine_z = {"location"}
-                    },
-                }
+                    globalstatus = true,
+                },
+                extensions = { "nvim-tree" },
+                sections = {
+                    lualine_a = {"mode"},
+                    lualine_b = {"branch", "diff", "diagnostics"},
+                    lualine_c = {{"filename", path=3}},
+                    lualine_x = {"encoding", "filetype", "lsp_status"},
+                    lualine_y = {"progress"},
+                    lualine_z = {"location"}
+                },
             })
         end
     },
+    {
+        "f-person/auto-dark-mode.nvim",
+        opts = {
+            set_dark_mode = function()
+                vim.cmd('colorscheme github_dark_tritanopia')
+            end,
+            set_light_mode = function()
+                vim.cmd('colorscheme github_light_tritanopia')
+            end,
+        }
+    }
 }
