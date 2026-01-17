@@ -18,8 +18,5 @@ return {
         dependencies = "nvzone/volt",
         opts = {},
         cmd = { "Typr", "TyprStats" },
-    },
-    {
-        "github/copilot.vim"
     }
 }

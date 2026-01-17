@@ -59,70 +59,19 @@ local lsp_servers = {
         },
     }),
     lang.server("tailwindcss"),
-    lang.server("ts_ls"),
+    lang.server("ts_ls", {
+        -- Prevent conflict with denols
+        root_markers = { "package.json" },
+        single_file_support = false,
+    }),
     lang.server("yamlls"),
 }
 
-local ensure_installed_from = function(servers)
+local server_names = function(servers)
     return arr.map(servers, function(s) return s.name end)
 end
 
-local handlers_from = function(servers, init)
-    return arr.reduce(servers, function (acc, s)
-        acc[s.name] = require("lspconfig")[s.name].setup(s.setup)
-        return acc
-    end, init)
-end
-
-local setup_typescript = function(lsp_zero, client)
-    local nvim_lsp = require('lspconfig')
-
-    local on_attach = function()
-        if nvim_lsp.util.root_pattern("deno.json", "deno.jsonc")(vim.fn.getcwd()) then
-            if client.name == "ts_ls" then
-                client.stop()
-                return
-            end
-        end
-    end
-
-    lsp_zero.configure('ts_ls', {
-        on_attach = on_attach(),
-        single_file_support = false,
-        root_dir = require('lspconfig.util').root_pattern('package.json')
-    })
-
-    lsp_zero.configure('denols', {
-        on_attach = on_attach(),
-        root_dir = nvim_lsp.util.root_pattern("deno.json", "deno.jsonc", "import_map.json"),
-    })
-end
-
-local setup_go = function(_, client)
-    -- https://github.com/golang/go/issues/54531#issuecomment-1464982242
-    if client.name == "gopls" and not client.server_capabilities.semanticTokensProvider then
-        local semantic = client.config.capabilities.textDocument.semanticTokens
-        client.server_capabilities.semanticTokensProvider = {
-            full = true,
-            legend = {tokenModifiers = semantic.tokenModifiers, tokenTypes = semantic.tokenTypes},
-            range = true,
-        }
-    end
-end
-
 return {
-    -- https://lsp-zero.netlify.app/v3.x/guide/lazy-loading-with-lazy-nvim.html
-    {
-        "VonHeikemen/lsp-zero.nvim",
-        branch = "v3.x",
-        lazy = true,
-        config = false,
-        init = function()
-            -- Disable automatic setup, we are doing it manually
-            vim.g.lsp_zero_extend_cmp = 0
-            vim.g.lsp_zero_extend_lspconfig = 0
-        end,
-    },
     {
         "williamboman/mason.nvim",
         lazy = false,
@@ -136,24 +85,24 @@ return {
             { "L3MON4D3/LuaSnip" },
             { "rafamadriz/friendly-snippets" },
             { "saadparwaiz1/cmp_luasnip" },
+            { "hrsh7th/cmp-nvim-lsp" },
         },
         config = function()
-            -- Here is where you configure the autocompletion settings.
-            local lsp_zero = require("lsp-zero")
-            lsp_zero.extend_cmp()
-
             -- bind vscode like snippets to luasnip
             require("luasnip.loaders.from_vscode").lazy_load()
 
-            -- And you can configure cmp even more, if you want to.
             local cmp = require("cmp")
             local select = { behavior = cmp.SelectBehavior.Select }
 
             cmp.setup({
-                formatting = lsp_zero.cmp_format(),
                 sources = {
-                    { name = 'nvim_lsp' },
-                    { name = 'luasnip' },
+                    { name = "nvim_lsp" },
+                    { name = "luasnip" },
+                },
+                snippet = {
+                    expand = function(args)
+                        require("luasnip").lsp_expand(args.body)
+                    end,
                 },
                 mapping = cmp.mapping.preset.insert({
                     ["<C-Space>"] = cmp.mapping.complete(),
@@ -168,45 +117,80 @@ return {
     -- LSP
     {
         "neovim/nvim-lspconfig",
-        cmd = {"LspInfo", "LspInstall", "LspStart"},
-        event = {"BufReadPre", "BufNewFile"},
+        cmd = { "LspInfo", "LspInstall", "LspStart" },
+        event = { "BufReadPre", "BufNewFile" },
         dependencies = {
             { "hrsh7th/cmp-nvim-lsp" },
             { "williamboman/mason-lspconfig.nvim" },
         },
         config = function()
-            -- This is where all the LSP shenanigans will live
-            local lsp_zero = require("lsp-zero")
-            lsp_zero.extend_lspconfig()
+            local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
-            -- format on save
-            -- https://github.com/VonHeikemen/lsp-zero.nvim/blob/abac76482ec3012a2b359ba956a74e2ffd33d46f/doc/md/lsp.md#enable-format-on-save
-            lsp_zero.format_on_save({
-                format_opts = {
-                    async = false,
-                    timeout_ms = 10000,
-                },
-                servers = {
-                    ["gopls"] = {"go"},
-                }
-            })
+            -- Configure all LSP servers using vim.lsp.config (Neovim 0.11+)
+            for _, s in ipairs(lsp_servers) do
+                local config = vim.tbl_deep_extend("force", {
+                    capabilities = capabilities,
+                }, s.setup)
+                vim.lsp.config(s.name, config)
+            end
 
-            --- if you want to know more about lsp-zero and mason.nvim
-            --- read this: https://github.com/VonHeikemen/lsp-zero.nvim/blob/v3.x/doc/md/guides/integrate-with-mason-nvim.md
-            lsp_zero.on_attach(function(client, bufnr)
-                -- see :help lsp-zero-keybindings
-                -- to learn the available actions
-                lsp_zero.default_keymaps({ buffer = bufnr })
+            -- Enable all configured servers
+            vim.lsp.enable(server_names(lsp_servers))
 
-                setup_go(lsp_zero, client)
-                setup_typescript(lsp_zero, client)
-            end)
-
+            -- Mason for auto-installation
             require("mason-lspconfig").setup({
-                ensure_installed = ensure_installed_from(lsp_servers),
-                handlers = handlers_from(lsp_servers, { lsp_zero.default_setup }),
+                ensure_installed = server_names(lsp_servers),
             })
-        end
+
+            -- LspAttach autocmd for keymaps & workarounds
+            vim.api.nvim_create_autocmd("LspAttach", {
+                callback = function(args)
+
+                    -- LSP keymaps (equivalent to lsp-zero defaults)
+                    vim.keymap.set("n", "K", vim.lsp.buf.hover)
+                    vim.keymap.set("n", "gd", vim.lsp.buf.definition)
+                    vim.keymap.set("n", "gD", vim.lsp.buf.declaration)
+                    vim.keymap.set("n", "gi", vim.lsp.buf.implementation)
+                    vim.keymap.set("n", "go", vim.lsp.buf.type_definition)
+                    vim.keymap.set("n", "gr", vim.lsp.buf.references)
+                    vim.keymap.set("n", "gs", vim.lsp.buf.signature_help)
+                    vim.keymap.set("n", "gl", vim.diagnostic.open_float)
+                    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
+                    vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
+
+                    -- Go semantic tokens workaround
+                    -- https://github.com/golang/go/issues/54531#issuecomment-1464982242
+                    local client = vim.lsp.get_client_by_id(args.data.client_id)
+
+                    if client and client.name == "gopls" then
+                        if not client.server_capabilities.semanticTokensProvider then
+                            local semantic = client.config.capabilities.textDocument.semanticTokens
+                            if semantic then
+                                client.server_capabilities.semanticTokensProvider = {
+                                    full = true,
+                                    legend = {
+                                        tokenModifiers = semantic.tokenModifiers,
+                                        tokenTypes = semantic.tokenTypes,
+                                    },
+                                    range = true,
+                                }
+                            end
+                        end
+                    end
+                end,
+            })
+
+            -- Format on save for Go files
+            vim.api.nvim_create_autocmd("BufWritePre", {
+                pattern = "*.go",
+                callback = function()
+                    vim.lsp.buf.format({
+                        async = false,
+                        timeout_ms = 10000,
+                    })
+                end,
+            })
+        end,
     },
 }
 
