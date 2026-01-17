@@ -3,7 +3,6 @@ local lang = require("internal.language-server")
 
 -- https://github.com/williamboman/mason-lspconfig.nvim?tab=readme-ov-file#available-lsp-servers
 local lsp_servers = {
-    lang.server("denols"),
     lang.server("dockerls"),
     lang.server("gopls", {
         -- https://github.com/golang/tools/blob/master/gopls/doc/vim.md#configuration
@@ -75,11 +74,11 @@ local handlers_from = function(servers, init)
     end, init)
 end
 
-local setup_deno_typescript = function(lsp_zero, client)
+local setup_typescript = function(lsp_zero, client)
     local nvim_lsp = require('lspconfig')
 
     local on_attach = function()
-        if nvim_lsp.util.root_pattern("deno.json", "import_map.json")(vim.fn.getcwd()) then
+        if nvim_lsp.util.root_pattern("deno.json", "deno.jsonc")(vim.fn.getcwd()) then
             if client.name == "ts_ls" then
                 client.stop()
                 return
@@ -200,7 +199,7 @@ return {
                 lsp_zero.default_keymaps({ buffer = bufnr })
 
                 setup_go(lsp_zero, client)
-                setup_deno_typescript(lsp_zero, client)
+                setup_typescript(lsp_zero, client)
             end)
 
             require("mason-lspconfig").setup({
