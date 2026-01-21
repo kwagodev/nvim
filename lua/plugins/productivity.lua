@@ -1,4 +1,6 @@
 return {
+    -- https://github.com/tpope/vim-sleuth
+    { "tpope/vim-sleuth" },
     -- https://github.com/windwp/nvim-autopairs
     {
         "windwp/nvim-autopairs",

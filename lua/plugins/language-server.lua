@@ -76,6 +76,11 @@ return {
         "williamboman/mason.nvim",
         lazy = false,
         config = true,
+        opts = {
+            ensure_installed = {
+                "prettier"
+            }
+        }
     },
     -- Autocompletion
     {
@@ -154,7 +159,9 @@ return {
                     vim.keymap.set("n", "go", vim.lsp.buf.type_definition)
                     vim.keymap.set("n", "gr", vim.lsp.buf.references)
                     vim.keymap.set("n", "gs", vim.lsp.buf.signature_help)
-                    vim.keymap.set("n", "gl", vim.diagnostic.open_float)
+                    vim.keymap.set("n", "gl", function()
+                        vim.diagnostic.open_float({ border = "rounded" })
+                    end)
                     vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
                     vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
 
