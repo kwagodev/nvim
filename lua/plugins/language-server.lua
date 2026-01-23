@@ -4,6 +4,7 @@ local lang = require("internal.language-server")
 -- https://github.com/williamboman/mason-lspconfig.nvim?tab=readme-ov-file#available-lsp-servers
 local lsp_servers = {
     lang.server("dockerls"),
+    lang.server("eslint"),
     lang.server("gopls", {
         -- https://github.com/golang/tools/blob/master/gopls/doc/vim.md#configuration
         settings = {
