@@ -6,13 +6,12 @@ return {
         cmd = { "ConformInfo" },
         keys = {
             {
-                -- Customize or remove this keymap to your liking
-                "<leader>f",
+                "=", -- The key you want
                 function()
-                    require("conform").format({ async = true })
+                    require("conform").format({ async = true, lsp_fallback = true })
                 end,
-                mode = "",
-                desc = "Format buffer",
+                mode = { "n", "v" }, -- Works in both Normal and Visual mode
+                desc = "Format buffer or selection",
             },
         },
         -- This will provide type hinting with LuaLS
@@ -21,9 +20,11 @@ return {
         opts = {
             -- Define your formatters
             formatters_by_ft = {
+                javascript = { "prettierd", "prettier", stop_after_first = true },
                 lua = { "stylua" },
                 python = { "isort", "black" },
-                javascript = { "prettierd", "prettier", stop_after_first = true },
+                typescript = { "prettierd", "prettier", stop_after_first = true },
+                typescriptreact = { "prettierd", "prettier", stop_after_first = true },
             },
             -- Set default options
             default_format_opts = {
@@ -91,5 +92,11 @@ return {
                 },
             })
         end,
+    },
+    -- https://github.com/windwp/nvim-ts-autotag
+    {
+        "windwp/nvim-ts-autotag",
+        event = { "BufReadPre", "BufNewFile" },
+        opts = {},
     },
 }
