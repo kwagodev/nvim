@@ -20,5 +20,40 @@ return {
         dependencies = "nvzone/volt",
         opts = {},
         cmd = { "Typr", "TyprStats" },
+    },
+    -- https://github.com/akinsho/toggleterm.nvim
+    {
+        "akinsho/toggleterm.nvim",
+        version = "*",
+        event = "VeryLazy",
+        config = function()
+            require("toggleterm").setup({
+                size = function(term)
+                    if term.direction == "horizontal" then
+                        return 15
+                    elseif term.direction == "vertical" then
+                        return vim.o.columns * 0.4
+                    end
+                end,
+                open_mapping = [[<leader>t]],
+                hide_numbers = true,
+                start_in_insert = true,
+                insert_mappings = true,
+                terminal_mappings = true,
+                direction = "float",
+                close_on_exit = true,
+                float_opts = {
+                    border = "rounded",
+                    width = math.floor(vim.o.columns * 0.80),
+                    height = math.floor(vim.o.lines * 0.90),
+                    winblend = 0,
+                },
+            })
+        end,
+        keys = {
+            { "<leader>tf", "<cmd>ToggleTerm direction=float<cr>",      desc = "Terminal Float" },
+            { "<leader>th", "<cmd>ToggleTerm direction=horizontal<cr>", desc = "Terminal Horizontal" },
+            { "<leader>tv", "<cmd>ToggleTerm direction=vertical<cr>",   desc = "Terminal Vertical" },
+        },
     }
 }

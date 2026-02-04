@@ -32,6 +32,9 @@ return {
             end
 
             require("nvim-tree").setup({
+                view = {
+                    width = '20%',
+                },
                 disable_netrw = true,
                 filters = {
                     dotfiles = true,

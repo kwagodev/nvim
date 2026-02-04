@@ -41,3 +41,10 @@ opt.scrolloff = 8
 opt.sidescrolloff = 8
 
 opt.updatetime = 50
+
+-- auto-reload files when changed externally
+opt.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
+  pattern = "*",
+  command = "checktime",
+})
