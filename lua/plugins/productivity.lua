@@ -38,8 +38,8 @@ return {
                 open_mapping = [[<leader>t]],
                 hide_numbers = true,
                 start_in_insert = true,
-                insert_mappings = true,
-                terminal_mappings = true,
+                insert_mappings = false,
+                terminal_mappings = false,
                 direction = "float",
                 close_on_exit = true,
                 float_opts = {
